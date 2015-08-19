@@ -1,3 +1,5 @@
+require 'thwait'
+
 module Backburner
   module Workers
     class ThreadsOnFork < Worker
@@ -186,8 +188,8 @@ module Backburner
         if @threads_number == 1
           run_while_can(name)
         else
-          threads_count = Thread.list.count
-          @threads_number.times do
+
+          @threads = @threads_number.times.map do
             create_thread do
               conn = Connection.new(Backburner.configuration.beanstalk_url)
               begin
@@ -197,7 +199,7 @@ module Backburner
               end
             end
           end
-          sleep 0.1 while Thread.list.count > threads_count
+          ThreadsWait.all_waits(*@threads)
         end
 
         coolest_exit
