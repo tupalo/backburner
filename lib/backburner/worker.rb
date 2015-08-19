@@ -140,11 +140,19 @@ module Backburner
       retry_status = "failed: attempt #{num_retries+1} of #{queue_config.max_job_retries+1}"
       if num_retries < queue_config.max_job_retries # retry again
         delay = queue_config.retry_delay + num_retries ** 3
-        job.release(:delay => delay)
-        self.log_job_end(job.name, "#{retry_status}, retrying in #{delay}s") if job_started_at
+        begin
+          job.release(:delay => delay)
+          self.log_job_end(job.name, "#{retry_status}, retrying in #{delay}s") if job_started_at
+        rescue Exception => e
+          self.log_error self.exception_message(e)
+        end
       else # retries failed, bury
-        job.bury
-        self.log_job_end(job.name, "#{retry_status}, burying") if job_started_at
+        begin
+          job.bury
+          self.log_job_end(job.name, "#{retry_status}, burying") if job_started_at
+        rescue Exception => e
+          self.log_error self.exception_message(e)
+        end
       end
       handle_error(e, job.name, job.args, job)
     end
